@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+playwright
+pyyaml
+pydantic
+python-multipart
+sqlite-utils
