@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: Court Collector API
+  version: "1.0.0"
+servers:
+  - url: https://YOUR_PUBLIC_BASE_URL
+paths:
+  /start:
+    post:
+      operationId: startJob
+      summary: Start collection job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                queries: { type: array, items: { type: string } }
+                year_from: { type: integer }
+                instances: { type: array, items: { type: string } }
+                max_links_per_query: { type: integer }
+                pause_sec: { type: integer }
+              required: [queries]
+      responses:
+        "200":
+          description: Started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id: { type: string }
+                  status: { type: string }
+  /status/{job_id}:
+    get:
+      operationId: getStatus
+      summary: Get job status
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id: { type: string }
+                  status: { type: string }
+                  links: { type: array, items: { type: string } }
+                  csv: { type: string, nullable: true }
+                  log: { type: array, items: { type: string } }
+  /download/{job_id}:
+    get:
+      operationId: downloadCsv
+      summary: Download CSV for job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
