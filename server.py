@@ -22,8 +22,12 @@ def safe(s):
     return re.sub(r"\s+"," ", s or "").strip()
 
 def pick_quote(text, max_words=25):
-    m = re.search(r'([^.]{10,240}(?:суд.{0,60}указал|оценив доказательства|приш[её]л к выводу)[^.]{0,240}\.)', text, re.I|re.S)
-    s = (m.group(1) if m else "")
+    m = re.search(
+        r'([^.]{10,240}(?:суд.{0,60}указал|оценив доказательства|приш[её]л к выводу)[^.]{0,240}\.)',
+        text,
+        re.I | re.S,
+    )
+    s = m.group(1) if m else ""
     return " ".join(s.split()[:max_words])
 
 def norm_candidates(text):
@@ -31,7 +35,9 @@ def norm_candidates(text):
         r"ст\.\s?54\.1\s*НК", r"п\.?\s?14\s*ст\.?\s?101\s*НК",
         r"ст\.\s?169\s*НК", r"ст\.\s?171\s*НК", r"ст\.\s?172\s*НК"
     ]
-    found = []
+    found = set()
     for p in pats:
         for m in re.finditer(p, text, re.I):
-            found.append(m.group
+            norm = safe(m.group()).lower()
+            found.add(norm)
+    return sorted(found)
