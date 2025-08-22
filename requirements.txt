@@ -4,4 +4,4 @@ playwright
 pyyaml
 pydantic
 python-multipart
-sqlite-utils
+python-multipart

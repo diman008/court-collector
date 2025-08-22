@@ -3,7 +3,7 @@ info:
   title: Court Collector API
   version: "1.0.0"
 servers:
-  - url: https://YOUR_PUBLIC_BASE_URL
+  - url: ${PUBLIC_BASE_URL}
 paths:
   /start:
     post:
