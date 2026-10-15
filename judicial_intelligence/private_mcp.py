@@ -8,7 +8,8 @@ from __future__ import annotations
 import os
 import secrets
 
-from .evidence import EvidenceStore
+from .source_checks import ReviewStore
+from .analytics import build_dossier
 from .storage import MissingCase
 
 
@@ -44,7 +45,7 @@ class HeaderKeyGate:
 def create_server(db_path: str):
     """Create typed read-only tools. Native MCP protocol handled by official SDK."""
     from mcp.server import MCPServer
-    store = EvidenceStore(db_path)
+    store = ReviewStore(db_path)
     server = MCPServer("Judicial Intelligence — local/private", instructions=(
         "Read-only local evidence; sources and judicial status are unverified. "
         "Do not claim a ruling is final or a violation established. No external lookups."
@@ -102,6 +103,27 @@ def create_server(db_path: str):
                 "note": "Norm text is not returned; check an official legal source."}
         except ValueError:
             return {"error": "Invalid date"}
+
+    @server.tool()
+    def analyst_case_dossier(case_number: str) -> dict:
+        """Read local evidence dossier with a bounded number of literal quotations."""
+        try:
+            report = build_dossier(store, case_number)
+            report["literal_references"] = report["literal_references"][:60]
+            report["response_bounded"] = True
+            return report
+        except (MissingCase, ValueError):
+            return {"error": "Case not found"}
+
+    @server.tool()
+    def manual_source_review_log(case_number: str) -> dict:
+        """Read append-only HUMAN review claims; does not verify electronic signatures."""
+        try:
+            records = store.list_source_checks(case_number)
+            return {"case_number": case_number, "records": records[:100],
+                    "verification_scope": "user_assertions_only"}
+        except (MissingCase, ValueError):
+            return {"error": "Case not found"}
 
     @server.tool()
     def official_verification_instructions() -> dict:

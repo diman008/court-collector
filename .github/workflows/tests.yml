@@ -15,3 +15,4 @@ jobs:
       - run: python -m pip install -e ".[test,mcp]"
       - run: python -m pytest -q
       - run: python -m compileall -q judicial_intelligence
+      - run: node --check judicial_intelligence/assets/analyst.js
