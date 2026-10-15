@@ -83,6 +83,39 @@
           </details>
         </section>
 
+        <section class="card">
+          <h2>Журнал ручной проверки источников</h2>
+          <p class="muted small">Здесь сохраняются сообщения проверяющего, а не результаты автоматического подтверждения судом. Подлинность ЭП системой не устанавливается.</p>
+          <div id="reviews-list" class="stacked"><p class="muted">Проверки не внесены.</p></div>
+          <details>
+            <summary>Записать результат ручной проверки</summary>
+            <form id="review-form" class="stacked">
+              <label for="review-provider">Проверяемый источник</label>
+              <select id="review-provider" required>
+                <option value="kad_casecard">КАД — карточка дела</option>
+                <option value="ras_decision">Банк решений арбитражных судов</option>
+                <option value="electronic_signature">Официальная проверка ЭП</option>
+                <option value="legal_text">Официальный текст правовой нормы</option>
+              </select>
+              <label for="review-url">URL просмотренной страницы</label>
+              <input id="review-url" type="url" required placeholder="https://kad.arbitr.ru/">
+              <label for="review-file">Связанный локальный файл</label>
+              <select id="review-file"><option value="">Не выбран</option></select>
+              <label for="review-result">Результат, заявленный проверяющим</label>
+              <select id="review-result" required>
+                <option value="inconclusive">Не удалось подтвердить</option>
+                <option value="match_claimed">По моей проверке совпадает</option>
+                <option value="mismatch_claimed">По моей проверке не совпадает</option>
+              </select>
+              <label for="reviewer-alias">Псевдоним проверяющего</label>
+              <input id="reviewer-alias" maxlength="100" required placeholder="Инспектор 1">
+              <label for="review-note">Примечание (до 500 символов)</label>
+              <input id="review-note" maxlength="500" placeholder="Что и где сравнивалось">
+              <button type="submit">Записать в журнал</button>
+            </form>
+          </details>
+        </section>
+
         <section class="card"><h2>Хронология по инстанциям</h2>
           <div id="timeline" class="stacked"><p class="muted">Акты не загружены.</p></div>
         </section>
