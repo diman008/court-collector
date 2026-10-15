@@ -10,6 +10,7 @@ import secrets
 
 from .search import SearchStore
 from .comparison import compare_cases
+from .source_registry import list_official_sources
 from .analytics import build_dossier
 from .storage import MissingCase
 
@@ -125,6 +126,11 @@ def create_server(db_path: str):
                     "verification_scope": "user_assertions_only"}
         except (MissingCase, ValueError):
             return {"error": "Case not found"}
+
+    @server.tool()
+    def official_source_registry() -> dict:
+        """Return official-source navigation and unverified automation permissions."""
+        return list_official_sources()
 
     @server.tool()
     def search_imported_court_text(query: str, limit: int = 20) -> dict:
