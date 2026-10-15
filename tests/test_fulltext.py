@@ -76,3 +76,13 @@ def test_fulltext_rest_authenticated(tmp_path):
     assert ok.status_code == 200, ok.text
     assert ok.json()["results"][0]["case_number"]=="А40-123/2025"
     assert client.get("/v1/fulltext",params={"q":"!@#$%"},headers=h).status_code == 422
+
+
+def test_fts_delete_trigger_removes_old_result(tmp_path):
+    store = SearchStore(str(tmp_path / "deletion.db"))
+    store.put_case("А40-123/2025")
+    inserted = store.put_document("А40-123/2025", "Уникальный маркер исследования", "user_provided")
+    assert store.search_text("маркер")["results"]
+    with store.connect() as conn:
+        conn.execute("DELETE FROM documents WHERE id=?", (inserted["id"],))
+    assert store.search_text("маркер")["results"] == []
