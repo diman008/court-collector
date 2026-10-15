@@ -1,8 +1,10 @@
-FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
+FROM python:3.12-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+COPY pyproject.toml .
+COPY judicial_intelligence/ judicial_intelligence/
+RUN pip install --no-cache-dir .
+RUN useradd -r -m app && mkdir -p /app/data && chown app:app /app/data
+USER app
 EXPOSE 8000
-CMD ["bash", "-lc", "python -m uvicorn server:app --host 0.0.0.0 --port 8000"]
+CMD ["uvicorn","judicial_intelligence.api:app","--host","0.0.0.0","--port","8000"]
