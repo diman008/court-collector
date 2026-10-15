@@ -21,12 +21,20 @@ def test_registered_read_only_tools(tmp_path):
     names = {x.name for x in tools}
     assert names == {"search_local_cases", "case_history", "case_citations",
                      "date_scoped_norms", "official_verification_instructions",
-                     "local_verification_packet"}
+                     "local_verification_packet", "analyst_case_dossier", "manual_source_review_log"}
     assert not any("write" in name or "upload" in name or "scrape" in name for name in names)
     result = asyncio.run(server.call_tool("search_local_cases", {"query": "А40", "limit": 5}))
     assert not result.is_error
     payload = result.structured_content or json.loads(result.content[0].text)
     assert payload["results"][0]["case_number"] == "А40-123/2025"
+    dossier = asyncio.run(server.call_tool("analyst_case_dossier", {"case_number": "А40-123/2025"}))
+    summary = dossier.structured_content or json.loads(dossier.content[0].text)
+    assert summary["legal_conclusions"] == []
+    assert summary["source_verification"] == "unverified"
+    reviews = asyncio.run(server.call_tool("manual_source_review_log", {"case_number": "А40-123/2025"}))
+    data = reviews.structured_content or json.loads(reviews.content[0].text)
+    assert data["verification_scope"] == "user_assertions_only"
+    assert data["records"] == []
 
 
 def test_asgi_http_key_gate():
