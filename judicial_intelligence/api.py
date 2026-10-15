@@ -4,11 +4,13 @@ import secrets
 from datetime import date
 from typing import Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, UploadFile, File, Form
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from . import __version__
 from .core import MAX_CHARS
-from .storage import Database, MissingCase
+from .storage import MissingCase
+from .evidence import EvidenceStore
+from .ingestion import MAX_FILE_BYTES, ImportErrorValue
 
 
 class StrictModel(BaseModel):
@@ -29,9 +31,30 @@ class DocumentInput(StrictModel):
     published_at: date | None = None
 
 
+
+class ActInput(StrictModel):
+    case_number: str = Field(min_length=8, max_length=40)
+    court: str = Field(min_length=1, max_length=250)
+    act_date: date
+    instance: Literal["first", "appeal", "cassation", "supreme", "other"]
+    act_type: str = Field(min_length=1, max_length=150)
+    reported_result: Literal["not_assessed","claim_granted","claim_denied",
+                             "partially_granted","remanded","terminated","other"] = "not_assessed"
+    linked_file_id: str | None = None
+    prior_act_id: str | None = None
+    relation_kind: Literal["unconfirmed","upholds","reverses","modifies","cites"] = "unconfirmed"
+
+
+class NormInput(StrictModel):
+    norm_id: str = Field(min_length=1, max_length=150)
+    text: str = Field(min_length=1, max_length=30000)
+    valid_from: date
+    valid_to: date | None = None
+    source_url: HttpUrl
+
 def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAPI:
     key = api_key if api_key is not None else os.getenv("JUDICIAL_API_KEY", "")
-    db = Database(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
+    db = EvidenceStore(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
     app = FastAPI(title="Judicial Intelligence", version=__version__, docs_url=None, redoc_url=None)
 
     def authenticate(x_api_key: str | None = Header(default=None)) -> None:
@@ -87,6 +110,69 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
             return db.report(case_number)
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
+
+
+    @app.post("/v1/evidence-files", status_code=201, dependencies=[Depends(authenticate)])
+    async def upload_evidence(case_number: str = Form(...),
+                              source_kind: Literal["user_provided", "official_export", "licensed_api"] = Form("user_provided"),
+                              source_url: str | None = Form(None),
+                              file: UploadFile = File(...)):
+        try:
+            raw = await file.read(MAX_FILE_BYTES + 1)
+            return db.ingest(case_number, file.filename or "", raw, source_kind, source_url)
+        except MissingCase as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+        except (ImportErrorValue, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        finally:
+            await file.close()
+
+    @app.get("/v1/evidence-files", dependencies=[Depends(authenticate)])
+    def evidence_files(case_number: str):
+        try:
+            return {"files": db.list_evidence(case_number)}
+        except (MissingCase, ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+
+    @app.get("/v1/evidence-report", dependencies=[Depends(authenticate)])
+    def evidence_report(case_number: str):
+        try:
+            return db.evidence_report(case_number)
+        except (MissingCase, ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+
+    @app.post("/v1/acts", status_code=201, dependencies=[Depends(authenticate)])
+    def create_act(payload: ActInput):
+        try:
+            return db.add_act(payload.case_number, court=payload.court, act_date=str(payload.act_date),
+                              instance=payload.instance, act_type=payload.act_type,
+                              reported_result=payload.reported_result,
+                              linked_file_id=payload.linked_file_id,
+                              prior_act_id=payload.prior_act_id, relation_kind=payload.relation_kind)
+        except MissingCase as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/v1/timeline", dependencies=[Depends(authenticate)])
+    def timeline(case_number: str):
+        try:
+            return db.timeline(case_number)
+        except (MissingCase, ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+
+    @app.post("/v1/norms", status_code=201, dependencies=[Depends(authenticate)])
+    def create_norm(payload: NormInput):
+        try:
+            return db.register_norm(payload.norm_id, payload.text, str(payload.valid_from),
+                                    str(payload.source_url),
+                                    str(payload.valid_to) if payload.valid_to else None)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/v1/norms", dependencies=[Depends(authenticate)])
+    def norm_at(norm_id: str = Query(..., max_length=150), on_date: date = Query(...)):
+        return {"versions": db.norm_at(norm_id, str(on_date)), "source_verification": "unverified"}
 
     return app
 
