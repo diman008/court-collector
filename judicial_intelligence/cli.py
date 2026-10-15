@@ -14,7 +14,7 @@ def main():
     p = sub.add_parser("import-txt")
     p.add_argument("number"); p.add_argument("filename"); p.add_argument("--source-url")
     p = sub.add_parser("import-file")
-    p.add_argument("number"); p.add_argument("filename"); p.add_argument("--source-url")
+    p.add_argument("number"); p.add_argument("filename"); p.add_argument("--source-url"); p.add_argument("--ocr", action="store_true", help="Offline OCR of textless PDF pages; requires optional OCR tools")
     p = sub.add_parser("evidence-report"); p.add_argument("number")
     p = sub.add_parser("timeline"); p.add_argument("number")
     p = sub.add_parser("report"); p.add_argument("number")
@@ -28,7 +28,7 @@ def main():
     elif args.command == "import-file":
         from pathlib import Path
         path = Path(args.filename)
-        result = store.ingest(args.number, path.name, path.read_bytes(), "user_provided", args.source_url)
+        result = store.ingest(args.number, path.name, path.read_bytes(), "user_provided", args.source_url, use_ocr=args.ocr)
     elif args.command == "evidence-report":
         result = store.evidence_report(args.number)
     elif args.command == "timeline":
