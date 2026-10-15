@@ -26,7 +26,8 @@ def test_dashboard_security_headers_and_bundled_static(tmp_path):
     assert "default-src 'none'" in page.headers["content-security-policy"]
     assert "script-src 'self'" in page.headers["content-security-policy"]
     assert page.headers["cache-control"] == "no-store"
-    assert "X-API-Key" not in page.text
+    assert 'value="secret"' not in page.text
+    assert 'type="password"' in page.text
     javascript = client.get("/analyst.js")
     assert javascript.status_code == 200
     assert "textContent" in javascript.text
