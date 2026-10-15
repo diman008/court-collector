@@ -13,7 +13,9 @@ from .core import MAX_CHARS
 from .storage import MissingCase
 from .evidence import EvidenceStore
 from .analytics import build_dossier
-from .source_checks import ReviewStore
+from .search import SearchStore
+from .comparison import compare_cases
+from .source_registry import list_official_sources
 from .ingestion import MAX_FILE_BYTES, ImportErrorValue
 
 
@@ -68,7 +70,7 @@ class ReviewInput(StrictModel):
 
 def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAPI:
     key = api_key if api_key is not None else os.getenv("JUDICIAL_API_KEY", "")
-    db = ReviewStore(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
+    db = SearchStore(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
     app = FastAPI(title="Judicial Intelligence", version=__version__, docs_url=None, redoc_url=None)
 
     def authenticate(x_api_key: str | None = Header(default=None)) -> None:
@@ -113,6 +115,30 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
             return build_dossier(db, case_number)
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
+
+    @app.get("/v1/sources", dependencies=[Depends(authenticate)])
+    def source_registry():
+        return list_official_sources()
+
+    @app.get("/v1/fulltext", dependencies=[Depends(authenticate)])
+    def fulltext_search(q: str = Query(..., min_length=1, max_length=160),
+                        case_number: str | None = Query(None,max_length=40),
+                        court: str | None = Query(None,max_length=120),
+                        limit: int = Query(30,ge=1,le=100)):
+        try:
+            return db.search_text(q,case_number=case_number,court=court,limit=limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=422,detail=str(exc)) from exc
+
+    @app.get("/v1/compare", dependencies=[Depends(authenticate)])
+    def compare_two_cases(left: str = Query(...,max_length=40),
+                          right: str = Query(...,max_length=40)):
+        try:
+            return compare_cases(db,left,right)
+        except MissingCase as exc:
+            raise HTTPException(status_code=404,detail="Case not found") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422,detail=str(exc)) from exc
 
     @app.post("/v1/cases", status_code=201, dependencies=[Depends(authenticate)])
     def put_case(payload: CaseInput):

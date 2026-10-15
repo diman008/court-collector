@@ -8,7 +8,9 @@ from __future__ import annotations
 import os
 import secrets
 
-from .source_checks import ReviewStore
+from .search import SearchStore
+from .comparison import compare_cases
+from .source_registry import list_official_sources
 from .analytics import build_dossier
 from .storage import MissingCase
 
@@ -45,7 +47,7 @@ class HeaderKeyGate:
 def create_server(db_path: str):
     """Create typed read-only tools. Native MCP protocol handled by official SDK."""
     from mcp.server import MCPServer
-    store = ReviewStore(db_path)
+    store = SearchStore(db_path)
     server = MCPServer("Judicial Intelligence — local/private", instructions=(
         "Read-only local evidence; sources and judicial status are unverified. "
         "Do not claim a ruling is final or a violation established. No external lookups."
@@ -124,6 +126,27 @@ def create_server(db_path: str):
                     "verification_scope": "user_assertions_only"}
         except (MissingCase, ValueError):
             return {"error": "Case not found"}
+
+    @server.tool()
+    def official_source_registry() -> dict:
+        """Return official-source navigation and unverified automation permissions."""
+        return list_official_sources()
+
+    @server.tool()
+    def search_imported_court_text(query: str, limit: int = 20) -> dict:
+        """Search local uploaded court texts only; returns source ID and literal snippet."""
+        try:
+            return store.search_text(query,limit=min(limit,30))
+        except ValueError:
+            return {"error": "Invalid full-text query"}
+
+    @server.tool()
+    def compare_imported_cases(left: str, right: str) -> dict:
+        """Compare two local cases mechanically; legal contradictions NOT verified."""
+        try:
+            return compare_cases(store,left,right)
+        except (ValueError,MissingCase):
+            return {"error": "Cases not found or not distinct"}
 
     @server.tool()
     def official_verification_instructions() -> dict:
