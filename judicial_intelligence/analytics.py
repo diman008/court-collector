@@ -9,6 +9,7 @@ def build_dossier(store: EvidenceStore, case_number: str) -> dict:
     case = store.get_case(number)
     files = store.list_evidence(number)
     timeline = store.timeline(number)
+    checks = store.list_source_checks(number) if hasattr(store, "list_source_checks") else []
     evidence = store.evidence_report(number)
     text_report = store.report(number)
     # Do not confuse repeated mentions with distinct acts or legal conclusions.
@@ -33,10 +34,13 @@ def build_dossier(store: EvidenceStore, case_number: str) -> dict:
         unresolved.append("Подлинность судебных документов и ЭП не подтверждена независимо.")
     if timeline["acts"]:
         unresolved.append("Даты, инстанции, исходы и вступление актов в силу не подтверждены реестром.")
+    if checks:
+        unresolved.append("Результаты ручной проверки сообщены пользователем и не удостоверены программно.")
     return {
         "case": case,
         "counts": {
             "evidence_files": len(files),
+            "manual_checks": len(checks),
             "text_documents": text_report["documents_count"],
             "acts": len(timeline["acts"]),
             "literal_mentions": len(file_mentions) + len(text_mentions),
@@ -44,6 +48,7 @@ def build_dossier(store: EvidenceStore, case_number: str) -> dict:
         },
         "norm_articles": norm_articles,
         "evidence_files": files,
+        "manual_checks": checks,
         "timeline": timeline,
         "literal_references": [
             {
