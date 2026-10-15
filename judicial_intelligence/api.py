@@ -56,14 +56,14 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
     def search_cases(q: str = Query("", max_length=160), limit: int = Query(30, ge=1, le=100)):
         return {"results": db.list_cases(q, limit)}
 
-    @app.get("/v1/cases/{case_number}", dependencies=[Depends(authenticate)])
+    @app.get("/v1/case", dependencies=[Depends(authenticate)])
     def get_case(case_number: str):
         try:
             return db.get_case(case_number)
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
 
-    @app.post("/v1/cases/{case_number}/documents", status_code=201, dependencies=[Depends(authenticate)])
+    @app.post("/v1/documents", status_code=201, dependencies=[Depends(authenticate)])
     def put_document(case_number: str, payload: DocumentInput):
         try:
             return db.put_document(case_number, payload.text, payload.source_kind,
@@ -74,14 +74,14 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    @app.get("/v1/cases/{case_number}/documents", dependencies=[Depends(authenticate)])
+    @app.get("/v1/documents", dependencies=[Depends(authenticate)])
     def list_documents(case_number: str):
         try:
             return {"documents": db.documents(case_number)}
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
 
-    @app.get("/v1/cases/{case_number}/report", dependencies=[Depends(authenticate)])
+    @app.get("/v1/report", dependencies=[Depends(authenticate)])
     def get_report(case_number: str):
         try:
             return db.report(case_number)
