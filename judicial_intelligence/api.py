@@ -15,6 +15,7 @@ from .evidence import EvidenceStore
 from .analytics import build_dossier
 from .search import SearchStore
 from .comparison import compare_cases
+from .source_registry import list_official_sources
 from .ingestion import MAX_FILE_BYTES, ImportErrorValue
 
 
@@ -114,6 +115,10 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
             return build_dossier(db, case_number)
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
+
+    @app.get("/v1/sources", dependencies=[Depends(authenticate)])
+    def source_registry():
+        return list_official_sources()
 
     @app.get("/v1/fulltext", dependencies=[Depends(authenticate)])
     def fulltext_search(q: str = Query(..., min_length=1, max_length=160),
