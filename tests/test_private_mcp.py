@@ -24,7 +24,8 @@ def test_registered_read_only_tools(tmp_path):
     assert not any("write" in name or "upload" in name or "scrape" in name for name in names)
     result = asyncio.run(server.call_tool("search_local_cases", {"query": "А40", "limit": 5}))
     assert not result.is_error
-    assert result.structured_content["results"][0]["case_number"] == "А40-123/2025"
+    payload = result.structured_content or json.loads(result.content[0].text)
+    assert payload["results"][0]["case_number"] == "А40-123/2025"
 
 
 def test_asgi_http_key_gate():
