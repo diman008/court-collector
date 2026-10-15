@@ -32,3 +32,16 @@
 - Extraction is not verification of court origin or integrity of a signature.
 - Source metadata, judicial events and legal versions are user-supplied and remain unverified.
 - A private multiuser production deployment requires authorization, encryption, retention rules, structured audit logs and legal review.
+
+## v2.2 alpha additions
+- OCR is explicitly opt-in and local. Requires system Tesseract and installed
+  Russian/English traineddata. Process hostile files only in isolated,
+  resource-limited workers; Tesseract availability is not a security boundary.
+- OCR page offsets index recognized text, not original PDF glyph geometry.
+  Human checking of every citation remains mandatory.
+- Private MCP exposes only READ operations; no external registry fetches or
+  write tools. This is a local prototype, NOT a public ChatGPT plugin.
+- X-API-Key and 127.0.0.1 binding are insufficient for internet deployment.
+  Any public/private network rollout requires TLS, user-specific auth,
+  authorization, audit, data retention policy and security review.
+- Official signature validation is NOT implemented. See docs/VERIFICATION.md.

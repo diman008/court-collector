@@ -1,12 +1,13 @@
 """Conservative offline extraction of user-supplied PDF and DOCX documents.
 
-Extracted text is not a proof of document authenticity. No OCR/network access.
+Extracted text is not proof of document authenticity. OCR is opt-in and offline.
 DOCX pagination is unavailable: its single logical segment is NOT a page.
 """
 from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import Callable
 from zipfile import BadZipFile, ZipFile
 from xml.etree import ElementTree
 import hashlib
@@ -85,15 +86,42 @@ def _docx(raw: bytes) -> tuple[Segment, ...]:
     return (Segment(1, "logical_document", "\n".join(paragraphs)),)
 
 
-def extract_file(filename: str, raw: bytes) -> ExtractedFile:
+def extract_file(filename: str, raw: bytes, *, use_ocr: bool = False,
+                 ocr_engine: Callable[[bytes, list[int]], dict[int, str]] | None = None) -> ExtractedFile:
     if not isinstance(raw, bytes) or not raw:
         raise ImportErrorValue("Empty input")
     if len(raw) > MAX_FILE_BYTES:
         raise ImportErrorValue("Input exceeds 8 MiB")
     ext = Path(filename or "").suffix.lower()
     if ext == ".pdf":
-        segments = _pdf(raw)
-        warnings = ("PDF text extraction does not verify digital signatures.",)
+        # Parse all pages first. OCR is ONLY for pages with no extracted text.
+        # The original input bytes remain unchanged.
+        try:
+            segments = _pdf(raw)
+        except TextUnavailable:
+            if not use_ocr:
+                raise
+            from pypdf import PdfReader
+            reader = PdfReader(BytesIO(raw), strict=True)
+            if reader.is_encrypted or len(reader.pages) > MAX_PAGES:
+                raise ImportErrorValue("Cannot OCR this PDF safely")
+            segments = tuple(Segment(i, "physical_page", page.extract_text() or "")
+                             for i, page in enumerate(reader.pages, 1))
+        missing = [p.index for p in segments if not p.text.strip()]
+        warnings_list = ["PDF text extraction does not verify digital signatures."]
+        if missing and use_ocr:
+            if ocr_engine is None:
+                from .ocr import recognize_pages
+                ocr_engine = recognize_pages
+            recognized = ocr_engine(raw, missing)
+            segments = tuple(
+                Segment(p.index, "ocr_page", recognized.get(p.index, ""))
+                if p.index in missing else p for p in segments
+            )
+            warnings_list.append("OCR text is unverified and may contain recognition errors; verify every extracted citation.")
+        elif missing:
+            warnings_list.append("Some PDF pages have no extractable text; coverage is incomplete.")
+        warnings = tuple(warnings_list)
     elif ext == ".docx":
         if not raw.startswith(b"PK"):
             raise ImportErrorValue("Invalid DOCX ZIP signature")
