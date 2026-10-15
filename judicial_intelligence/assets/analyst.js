@@ -84,6 +84,7 @@
       $("warnings").append(text("li", "Нет диагностированных пробелов (это не доказательство подлинности)."));
     } else unresolved.forEach(w => $("warnings").append(text("li", w)));
     renderEvidence(data.evidence_files || []);
+    renderReviews(data.manual_checks || []);
     renderTimeline(data.timeline?.acts || []);
     renderCitations(data.literal_references || [], data.mentions_truncated);
     document.querySelectorAll("#cases-list button").forEach(btn => {
@@ -93,6 +94,10 @@
   }
   function renderEvidence(files) {
     clear("evidence-list");
+    const fileList = $("review-file");
+    fileList.replaceChildren();
+    fileList.append(new Option("Не выбран", ""));
+    for (const file of files) fileList.append(new Option(file.filename + " · " + file.id.slice(0, 8), file.id));
     if (!files.length) return paragraph($("evidence-list"), "Файлы не загружены.");
     for (const f of files) {
       const el = item(f.filename || f.id);
@@ -111,6 +116,20 @@
         } catch (e) { showError(e); }
       });
       el.append(verify); $("evidence-list").append(el);
+    }
+  }
+  function renderReviews(checks) {
+    clear("reviews-list");
+    if (!checks.length) return paragraph($("reviews-list"), "Ручные проверки пока не внесены.");
+    for (const record of checks) {
+      const el = item(record.source_type + " · " + record.recorded_at);
+      meta(el, record.claimed_result, record.independent_verification, record.reviewer_alias);
+      paragraph(el, "Указанный адрес: " + record.source_url, "muted small");
+      if (record.file_sha256_at_review) {
+        paragraph(el, "Привязанный SHA-256: " + record.file_sha256_at_review, "muted small");
+      }
+      if (record.reviewer_note) paragraph(el, "Комментарий: " + record.reviewer_note, "muted small");
+      $("reviews-list").append(el);
     }
   }
   function renderTimeline(acts) {
@@ -152,7 +171,7 @@
     catch (err) { key = ""; showError(err); }
   });
   $("disconnect").addEventListener("click", () => {
-    key = ""; selected = ""; ["cases-list","evidence-list","timeline","citations","warnings"].forEach(clear);
+    key = ""; selected = ""; ["cases-list","evidence-list","reviews-list","timeline","citations","warnings"].forEach(clear);
     $("case-heading").textContent = "Выберите дело"; $("case-court").textContent = "";
     ["count-files","count-acts","count-mentions","count-norms"].forEach(id => $(id).textContent = "—");
     message("Ключ доступа удалён из памяти вкладки.");
@@ -171,6 +190,28 @@
       });
       await searchCases(); await loadDossier(caseRow.case_number);
       message("Локальная карточка создана. Подлинность данных не проверена.");
+    } catch (err) { showError(err); }
+  });
+  $("review-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!selected) return message("Выберите дело перед записью проверки.");
+    const data = {
+      case_number: selected,
+      source_type: $("review-provider").value,
+      source_url: $("review-url").value.trim(),
+      claimed_result: $("review-result").value,
+      reviewer_alias: $("reviewer-alias").value.trim(),
+      reviewer_note: $("review-note").value.trim(),
+      file_id: $("review-file").value || null
+    };
+    try {
+      await req("/v1/reviews", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+      await loadDossier(selected);
+      message("Запись сохранена как утверждение проверяющего; официальная ЭП не верифицирована.");
     } catch (err) { showError(err); }
   });
   $("upload-form").addEventListener("submit", async event => {
