@@ -13,6 +13,7 @@ from .core import MAX_CHARS
 from .storage import MissingCase
 from .evidence import EvidenceStore
 from .analytics import build_dossier
+from .source_checks import ReviewStore
 from .ingestion import MAX_FILE_BYTES, ImportErrorValue
 
 
@@ -55,9 +56,19 @@ class NormInput(StrictModel):
     valid_to: date | None = None
     source_url: HttpUrl
 
+class ReviewInput(StrictModel):
+    case_number: str = Field(min_length=8,max_length=40)
+    file_id: str | None = Field(default=None,max_length=90)
+    source_type: Literal["kad_casecard","ras_decision","electronic_signature","legal_text"]
+    source_url: HttpUrl
+    claimed_result: Literal["match_claimed","mismatch_claimed","inconclusive"]
+    reviewer_alias: str = Field(min_length=1,max_length=100)
+    reviewer_note: str = Field(default="",max_length=500)
+
+
 def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAPI:
     key = api_key if api_key is not None else os.getenv("JUDICIAL_API_KEY", "")
-    db = EvidenceStore(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
+    db = ReviewStore(db_path or os.getenv("JUDICIAL_DB_PATH", "data/judicial.sqlite3"))
     app = FastAPI(title="Judicial Intelligence", version=__version__, docs_url=None, redoc_url=None)
 
     def authenticate(x_api_key: str | None = Header(default=None)) -> None:
@@ -183,6 +194,33 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
             return db.verification_packet(case_number, file_id)
         except (ValueError, MissingCase) as exc:
             raise HTTPException(status_code=404, detail="Case or evidence not found") from exc
+
+    @app.post("/v1/reviews", status_code=201, dependencies=[Depends(authenticate)])
+    def record_manual_review(payload: ReviewInput):
+        try:
+            return db.record_source_check(
+                payload.case_number,
+                file_id=payload.file_id,
+                source_type=payload.source_type,
+                source_url=str(payload.source_url),
+                claimed_result=payload.claimed_result,
+                reviewer_alias=payload.reviewer_alias,
+                reviewer_note=payload.reviewer_note,
+            )
+        except MissingCase as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/v1/reviews", dependencies=[Depends(authenticate)])
+    def list_manual_reviews(case_number: str = Query(...,max_length=40)):
+        try:
+            return {
+                "records": db.list_source_checks(case_number),
+                "verification_scope": "user_assertions_only",
+            }
+        except (MissingCase,ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
 
     @app.post("/v1/acts", status_code=201, dependencies=[Depends(authenticate)])
     def create_act(payload: ActInput):
