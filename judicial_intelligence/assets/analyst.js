@@ -162,6 +162,49 @@
     }
     if (truncated) paragraph($("citations"), "Показаны первые 250 упоминаний каждого типа. Полный массив не выведен.");
   }
+  $("fulltext-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    try {
+      const response = await req(qp("/v1/fulltext", { q: $("fulltext-query").value.trim(), limit:"30" }));
+      clear("fulltext-results");
+      if (!response.results?.length) return paragraph($("fulltext-results"), "Совпадений в локальных документах нет.");
+      for (const result of response.results) {
+        const box = item(result.case_number + " · " + (result.court || "Суд не указан"));
+        meta(box, result.source_type, result.location_kind + " #" + result.location_index,
+             result.verification_status);
+        box.append(text("div", result.excerpt, "quote"));
+        paragraph(box, "Источник: " + (result.source_url || "не указан") + " · SHA-256: " + result.sha256, "muted small");
+        const b = text("button", "Открыть дело", "secondary");
+        b.type = "button";
+        b.addEventListener("click", () => loadDossier(result.case_number).catch(showError));
+        box.append(b); $("fulltext-results").append(box);
+      }
+      message("Совпадения в локальных текстах: " + response.results.length + ". Это не подтверждённые судебные выводы.");
+    } catch (err) { showError(err); }
+  });
+  $("compare-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    try {
+      const result = await req(qp("/v1/compare", {
+        left:$("compare-left").value.trim(), right:$("compare-right").value.trim()
+      }));
+      clear("compare-results");
+      paragraph($("compare-results"), "Общие упоминаемые статьи НК РФ: " +
+        (result.shared_norm_articles.join(", ") || "не обнаружены"));
+      for (const [label, side] of [["Дело 1",result.left],["Дело 2",result.right]]) {
+        const el = item(label + " — " + side.case.case_number);
+        meta(el,"Актов: " + side.counts.acts,"Цитат: " + side.counts.literal_mentions);
+        for (const citation of side.citations.slice(0,4)) {
+          el.append(text("div", citation.quote + " · SHA-256: " + citation.sha256, "quote"));
+        }
+        $("compare-results").append(el);
+      }
+      paragraph($("compare-results"), "Различающиеся введённые результаты по одной инстанции: " +
+        result.possibly_different_reported_results.length);
+      paragraph($("compare-results"), result.warning);
+      message("Сравнение выполнено без юридических выводов и подтверждения вступления актов в силу.");
+    } catch (err) { showError(err); }
+  });
   $("session-form").addEventListener("submit", async event => {
     event.preventDefault();
     key = $("api-key").value;
