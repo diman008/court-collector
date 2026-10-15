@@ -119,3 +119,6 @@ python -m judicial_intelligence.private_mcp
 журналирование и отдельное согласование безопасности. Не публикуйте порт в интернет.
 
 Порядок проверки официальной электронной подписи — [VERIFICATION](docs/VERIFICATION.md).
+
+- GET /v1/verification-packet?case_number=...&file_id=... — контроль SHA-256 сохранённого оригинала и пошаговый порядок независимой проверки, **без** автоматического утверждения подлинности.
+- MCP tool local_verification_packet — такой же read-only контроль для доверенного локального агента.
