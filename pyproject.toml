@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "judicial-intelligence"
-version = "2.2.0a1"
+version = "2.3.0a1"
 description = "Evidence-first analysis of Russian arbitration court documents"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "pydantic>=2.8,<3", "pypdf>=5,<7", "python-multipart>=0.0.20,<1"]
@@ -22,3 +22,6 @@ include = ["judicial_intelligence*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+judicial_intelligence = ["assets/*.html", "assets/*.css", "assets/*.js"]
