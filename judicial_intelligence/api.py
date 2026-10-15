@@ -2,14 +2,17 @@
 import os
 import secrets
 from datetime import date
+from importlib.resources import files
 from typing import Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from . import __version__
 from .core import MAX_CHARS
 from .storage import MissingCase
 from .evidence import EvidenceStore
+from .analytics import build_dossier
 from .ingestion import MAX_FILE_BYTES, ImportErrorValue
 
 
@@ -66,6 +69,39 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
     @app.get("/health")
     def health():
         return {"status": "ok", "version": __version__, "external_connectors": "disabled"}
+
+    def _asset(filename: str, mime: str) -> Response:
+        content = files("judicial_intelligence").joinpath("assets", filename).read_bytes()
+        response = Response(content=content, media_type=mime)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; connect-src 'self'; script-src 'self'; "
+            "style-src 'self'; img-src 'self'; form-action 'self'; "
+            "base-uri 'none'; frame-ancestors 'none'"
+        )
+        return response
+
+    @app.get("/analyst", include_in_schema=False)
+    def analyst_page():
+        # Static app shell only: no case data or keys are interpolated.
+        return _asset("analyst.html", "text/html; charset=utf-8")
+
+    @app.get("/analyst.js", include_in_schema=False)
+    def analyst_script():
+        return _asset("analyst.js", "text/javascript; charset=utf-8")
+
+    @app.get("/analyst.css", include_in_schema=False)
+    def analyst_styles():
+        return _asset("analyst.css", "text/css; charset=utf-8")
+
+    @app.get("/v1/dossier", dependencies=[Depends(authenticate)])
+    def case_dossier(case_number: str = Query(..., max_length=40)):
+        try:
+            return build_dossier(db, case_number)
+        except (MissingCase, ValueError) as exc:
+            raise HTTPException(status_code=404, detail="Case not found") from exc
 
     @app.post("/v1/cases", status_code=201, dependencies=[Depends(authenticate)])
     def put_case(payload: CaseInput):
