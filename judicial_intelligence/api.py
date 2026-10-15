@@ -141,6 +141,13 @@ def create_app(db_path: str | None = None, api_key: str | None = None) -> FastAP
         except (MissingCase, ValueError) as exc:
             raise HTTPException(status_code=404, detail="Case not found") from exc
 
+    @app.get("/v1/verification-packet", dependencies=[Depends(authenticate)])
+    def verification_packet(case_number: str, file_id: str):
+        try:
+            return db.verification_packet(case_number, file_id)
+        except (ValueError, MissingCase) as exc:
+            raise HTTPException(status_code=404, detail="Case or evidence not found") from exc
+
     @app.post("/v1/acts", status_code=201, dependencies=[Depends(authenticate)])
     def create_act(payload: ActInput):
         try:
