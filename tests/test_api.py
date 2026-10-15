@@ -12,13 +12,13 @@ def test_v1_workflow(tmp_path):
     h = {"X-API-Key": "test-key"}
     response = client.post("/v1/cases", headers=h, json={"case_number": "A40-111/2025"})
     assert response.status_code == 201
-    doc = client.post("/v1/cases/А40-111/2025/documents", headers=h, json={
+    doc = client.post("/v1/documents?case_number=А40-111/2025", headers=h, json={
         "text": "Упомянута ст. 54.1 НК РФ без вывода о нарушении.",
         "source_kind": "user_provided",
     })
     assert doc.status_code == 201
     assert doc.json()["verification_status"] == "unverified_user_input"
-    report = client.get("/v1/cases/А40-111/2025/report", headers=h)
+    report = client.get("/v1/report?case_number=А40-111/2025", headers=h)
     assert report.status_code == 200
     assert report.json()["article_mentions"][0]["article"] == "54.1"
     assert report.json()["legal_conclusions"] == []
