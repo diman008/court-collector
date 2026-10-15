@@ -23,3 +23,12 @@
 10. Next controls: user roles, session expiry, audit events, retention/deletion,
     verified provenance, malware scanning, file-upload size limits, SSRF controls
     for future URL adapters, backup/restore exercises.
+
+## v2.1 input and trust limitations
+- Uploads are limited to 8 MiB and extracted documents to 200 PDF pages / 200000 characters.
+- Only PDF and DOCX are accepted by the binary ingestion handler. Scanned PDFs do not undergo OCR.
+- DOCX is a ZIP container. Extraction caps XML bytes and entry counts but requires continued hostile-file fuzzing.
+- All original bytes are stored in SQLite; **filesystem permissions are not encryption**.
+- Extraction is not verification of court origin or integrity of a signature.
+- Source metadata, judicial events and legal versions are user-supplied and remain unverified.
+- A private multiuser production deployment requires authorization, encryption, retention rules, structured audit logs and legal review.
