@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Judicial Intelligence — Рабочее место</title>
+  <link rel="stylesheet" href="/analyst.css">
+  <script src="/analyst.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap topbar">
+      <div><div class="eyebrow">JUDICIAL INTELLIGENCE · LOCAL ALPHA</div>
+        <h1>Судебная аналитика</h1>
+        <p>Дела, документы, цитаты и инстанции — с контролем первоисточников</p></div>
+      <span class="status">Локальная база · без поиска на КАД</span>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="warning" role="note"><strong>Внимание.</strong> Данные из локальной базы могут быть непроверенными.
+      Упоминания статей не доказывают нарушение, а хеш файла не подтверждает ЭП судьи.</div>
+
+    <section class="card session">
+      <div><h2>Доступ к базе</h2><p class="muted">Введите ключ локального API. Он хранится только в памяти этой вкладки.</p></div>
+      <form id="session-form" class="inline-form">
+        <label for="api-key">Ключ API</label>
+        <input id="api-key" name="api-key" type="password" autocomplete="off" required minlength="1" placeholder="X-API-Key">
+        <button type="submit">Подключиться</button>
+        <button type="button" id="disconnect" class="secondary">Отключиться</button>
+      </form>
+    </section>
+
+    <div class="columns">
+      <aside class="card">
+        <h2>Мои дела</h2>
+        <form id="search-form">
+          <label for="query">Номер, суд или название</label>
+          <div class="inline-form">
+            <input id="query" name="query" placeholder="А40-123/2025" maxlength="160">
+            <button type="submit">Найти</button>
+          </div>
+        </form>
+        <ul id="cases-list" class="results" aria-live="polite"><li class="muted">Подключите локальную базу.</li></ul>
+        <details>
+          <summary>Добавить карточку дела</summary>
+          <form id="create-form" class="stacked">
+            <label for="new-number">Номер арбитражного дела</label>
+            <input id="new-number" required placeholder="А40-123/2025">
+            <label for="new-title">Описание</label>
+            <input id="new-title" maxlength="400">
+            <label for="new-court">Суд</label>
+            <input id="new-court" maxlength="250">
+            <button type="submit">Сохранить</button>
+          </form>
+        </details>
+      </aside>
+
+      <section class="content">
+        <section class="card" aria-live="polite">
+          <div class="between"><h2 id="case-heading">Выберите дело</h2><span id="case-court" class="muted"></span></div>
+          <div class="metrics">
+            <div><strong id="count-files">—</strong><span>Файлов</span></div>
+            <div><strong id="count-acts">—</strong><span>Актов</span></div>
+            <div><strong id="count-mentions">—</strong><span>Упоминаний</span></div>
+            <div><strong id="count-norms">—</strong><span>Норм НК</span></div>
+          </div>
+          <h3>Что ещё нужно проверить</h3>
+          <ul id="warnings" class="warnings"><li>Сначала выберите дело.</li></ul>
+        </section>
+
+        <section class="card">
+          <h2>Документы и источники</h2>
+          <div id="evidence-list" class="stacked"><p class="muted">Нет выбранного дела.</p></div>
+          <details>
+            <summary>Добавить файл PDF или DOCX</summary>
+            <form id="upload-form" class="stacked">
+              <label for="upload-file">Документ (не более 8 МиБ)</label>
+              <input type="file" id="upload-file" accept=".pdf,.docx" required>
+              <label for="upload-url">Ссылка на источник (необязательно)</label>
+              <input id="upload-url" type="url" placeholder="https://...">
+              <button type="submit">Загрузить в локальную базу</button>
+            </form>
+          </details>
+        </section>
+
+        <section class="card"><h2>Хронология по инстанциям</h2>
+          <div id="timeline" class="stacked"><p class="muted">Акты не загружены.</p></div>
+        </section>
+
+        <section class="card"><h2>Точные текстовые упоминания норм НК</h2>
+          <div id="citations" class="stacked"><p class="muted">Упоминания не найдены.</p></div>
+          <p class="muted small">Цитата соответствует извлечённому тексту файла. Для OCR обязательно сверьте её с изображением страницы.</p>
+        </section>
+      </section>
+    </div>
+
+    <section class="card resources">
+      <h2>Проверка по официальным источникам</h2>
+      <p>Внешние системы открываются вручную: приложение не выгружает в них данные автоматически.</p>
+      <nav aria-label="Официальные источники">
+        <a href="https://kad.arbitr.ru/" target="_blank" rel="noopener noreferrer">Картотека арбитражных дел ↗</a>
+        <a href="https://check.arbitr.ru/" target="_blank" rel="noopener noreferrer">Проверка подписи суда ↗</a>
+        <a href="https://www.vsrf.ru/lk/practice/acts" target="_blank" rel="noopener noreferrer">Акты Верховного Суда ↗</a>
+        <a href="https://pravo.gov.ru/" target="_blank" rel="noopener noreferrer">Официальные тексты НПА ↗</a>
+      </nav>
+    </section>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </main>
+  <footer class="wrap muted small">Локальный прототип. Никаких выводов о нарушениях без проверки судом и экспертом.</footer>
+</body>
+</html>
