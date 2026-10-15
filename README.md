@@ -37,10 +37,11 @@ uvicorn judicial_intelligence.api:app --host 127.0.0.1 --port 8000
 ```
 
 - `POST /v1/cases`: `{"case_number":"А40-12345/2025"}`
-- `POST /v1/cases/{number}/documents`: `{"text":"...","source_kind":"user_provided"}`
+- `POST /v1/documents?case_number={number}`: `{"text":"...","source_kind":"user_provided"}`
 - `GET /v1/cases?q=...`: локальный поиск
-- `GET /v1/cases/{number}/documents`: метаданные документов
-- `GET /v1/cases/{number}/report`: цитаты, offsets, SHA-256, пределы выводов
+- `GET /v1/case?case_number={number}`: получить карточку
+- `GET /v1/documents?case_number={number}`: метаданные документов
+- `GET /v1/report?case_number={number}`: цитаты, offsets, SHA-256, пределы выводов
 - `GET /health`: статус сервиса, без доступа к данным
 
 ## Границы и история
