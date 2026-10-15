@@ -30,6 +30,29 @@
       </form>
     </section>
 
+    <section class="card">
+      <h2>Поиск по текстам судебных документов</h2>
+      <p class="muted small">Ищет только в загруженных текстах. Результаты привязаны к исходному файлу и странице или логическому сегменту.</p>
+      <form id="fulltext-form" class="inline-form">
+        <label for="fulltext-query">Слова или обстоятельства</label>
+        <input id="fulltext-query" maxlength="160" placeholder="доказательства поставки" required>
+        <button type="submit">Найти в документах</button>
+      </form>
+      <div id="fulltext-results" class="stacked" aria-live="polite"></div>
+    </section>
+    <section class="card">
+      <h2>Сравнение двух судебных дел</h2>
+      <p class="muted small">Сопоставляются упомянутые статьи, документы, инстанции и заявленные результаты. Сходство фактов и противоположность судебных позиций не устанавливаются автоматически.</p>
+      <form id="compare-form" class="inline-form">
+        <label for="compare-left">Дело 1</label>
+        <input id="compare-left" placeholder="А40-123/2025" required>
+        <label for="compare-right">Дело 2</label>
+        <input id="compare-right" placeholder="А55-456/2025" required>
+        <button type="submit">Сравнить</button>
+      </form>
+      <div id="compare-results" class="stacked" aria-live="polite"></div>
+    </section>
+
     <div class="columns">
       <aside class="card">
         <h2>Мои дела</h2>
