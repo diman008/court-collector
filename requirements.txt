@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-playwright
-pyyaml
-pydantic
-python-multipart
-python-multipart
