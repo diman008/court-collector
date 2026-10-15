@@ -74,12 +74,12 @@ class EvidenceStore(Database):
         return value
 
     def ingest(self, case_number: str, filename: str, raw: bytes, source_kind: str,
-               source_url: str | None = None) -> dict:
+               source_url: str | None = None, *, use_ocr: bool = False) -> dict:
         number = normalize_case_number(case_number)
         self.get_case(number)
         if source_kind not in ("user_provided","official_export","licensed_api"):
             raise ValueError("Unknown source kind")
-        extracted = extract_file(filename, raw)
+        extracted = extract_file(filename, raw, use_ocr=use_ocr)
         with self.connect() as db:
             existing = db.execute(
                 "SELECT * FROM evidence_files WHERE case_number=? AND file_sha256=?",
