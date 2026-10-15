@@ -1,6 +1,7 @@
 """Provenance-preserving storage for imported files, court-act claims and norm versions."""
 from __future__ import annotations
 from datetime import date
+import hashlib
 import json
 from uuid import uuid4
 from .core import extract_articles, normalize_case_number
@@ -212,3 +213,38 @@ class EvidenceStore(Database):
                    AND (valid_to IS NULL OR valid_to>=?) ORDER BY valid_from DESC""",
                 (norm_id,on_date,on_date)).fetchall()
         return [dict(row) for row in rows]
+
+    def verification_packet(self, case_number: str, file_id: str) -> dict:
+        """Local byte-integrity check + unverified official signature review instructions."""
+        number = normalize_case_number(case_number)
+        self.get_case(number)
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM evidence_files WHERE case_number=? AND id=?",
+                (number, file_id),
+            ).fetchone()
+        if row is None:
+            raise ValueError("File not found within this case")
+        observed = hashlib.sha256(row["original_bytes"]).hexdigest()
+        return {
+            "case_number": number,
+            "file_id": row["id"],
+            "filename": row["filename"],
+            "original_sha256": row["file_sha256"],
+            "stored_bytes_match_sha256": observed == row["file_sha256"],
+            "claimed_source_url": row["source_url"],
+            "source_claim": row["source_kind"],
+            "received_at": row["received_at"],
+            "source_verification_status": row["verification_status"],
+            "signature_verification_status": "not_performed",
+            "judicial_finality_verified": False,
+            "official_signature_check_url": "https://check.arbitr.ru/",
+            "instructions": [
+                "Identify the precise act and case number on the official portal.",
+                "Upload the exact authorized electronic document and separate signature files.",
+                "Run the official check, review the output and retain evidence locally.",
+                "Compare the exact checked original bytes with original_sha256.",
+                "Have an authorized reviewer confirm the result and the case timeline.",
+            ],
+            "warning": "Matching a stored SHA-256 does not prove the court signed this act.",
+        }
