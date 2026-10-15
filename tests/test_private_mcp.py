@@ -22,7 +22,7 @@ def test_registered_read_only_tools(tmp_path):
     assert names == {"search_local_cases", "case_history", "case_citations",
                      "date_scoped_norms", "official_verification_instructions",
                      "local_verification_packet", "analyst_case_dossier", "manual_source_review_log",
-                     "search_imported_court_text", "compare_imported_cases"}
+                     "search_imported_court_text", "compare_imported_cases", "official_source_registry"}
     assert not any("write" in name or "upload" in name or "scrape" in name for name in names)
     result = asyncio.run(server.call_tool("search_local_cases", {"query": "А40", "limit": 5}))
     assert not result.is_error
