@@ -81,6 +81,14 @@ def create_server(db_path: str):
             return {"error": "Case not found"}
 
     @server.tool()
+    def local_verification_packet(case_number: str, file_id: str) -> dict:
+        """Verify only the integrity of locally stored bytes; signature remains UNCHECKED."""
+        try:
+            return store.verification_packet(case_number, file_id)
+        except (ValueError, MissingCase):
+            return {"error": "Case or evidence not found"}
+
+    @server.tool()
     def date_scoped_norms(norm_id: str, as_of: str) -> dict:
         """Read locally entered historical norm text with UNVERIFIED provenance."""
         if len(norm_id) > 150:
