@@ -80,6 +80,30 @@ def test_empty_dossier_and_no_cross_case_leak(tmp_path):
     assert missing.status_code == 404
 
 
+def test_dossier_deduplicates_article_ids_and_preserves_literal_quotes(tmp_path):
+    path = str(tmp_path / "variants.db")
+    store = EvidenceStore(path)
+    case_number = "А40-123/2025"
+    store.put_case(case_number)
+    variants = ["СТ.\t54.1  нк рф", "ст.54.1 НК РФ", "ст. 169 НК РФ"]
+    source = "; ".join([*variants, variants[0], "ст. 172 НК РФФ"])
+    client = TestClient(create_app(path, api_key="test-key"))
+    request = {"params": {"case_number": case_number}, "headers": {"X-API-Key": "test-key"}}
+
+    document = {"text": source, "source_kind": "user_provided"}
+    assert client.post("/v1/documents", json=document, **request).status_code == 201
+    response = client.get("/v1/dossier", **request)
+
+    assert response.status_code == 200
+    report = response.json()
+    assert report["norm_articles"] == ["54.1", "169"]
+    assert report["counts"]["literal_mentions"] == 4
+    references = report["literal_references"]
+    assert [item["quote"] for item in references] == [*variants, variants[0]]
+    for item in references:
+        assert source[item["offset_start"]:item["offset_end"]] == item["quote"]
+
+
 def test_detect_tampered_original_in_dossier(tmp_path):
     path = str(tmp_path / "tampered.db")
     db = EvidenceStore(path)
