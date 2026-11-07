@@ -1,6 +1,7 @@
 """SQLite evidence store; source hashes and exact offsets remain attached."""
 from __future__ import annotations
 import sqlite3
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -43,11 +44,13 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_docs_case ON documents(case_number);
             """)
 
+    @contextmanager
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=15)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA foreign_keys=ON")
-        return db
+        with closing(sqlite3.connect(self.path, timeout=15)) as db:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA foreign_keys=ON")
+            with db:
+                yield db
 
     def put_case(self, case_number: str, title: str = "",
                  court: str = "", case_date: str | None = None) -> dict:

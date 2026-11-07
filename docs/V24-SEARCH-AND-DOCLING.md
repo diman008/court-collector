@@ -15,6 +15,25 @@ Updated 2026-10-15.
 - CLI: judicial-intelligence fulltext "доказательства поставки" --court Москва
 - MCP (private, read-only): search_imported_court_text.
 
+### Offline ranked-search benchmark
+
+Run `python -m scripts.benchmark_ranked_search PATH_TO_CORPUS.json` from the
+repository root after installing the project. Supply locally stored, authorized
+text only. Keep the corpus and relevance judgments out of Git and external APIs.
+
+The input contains `documents` with `case_number`, `court`, and `text` (one
+document per case), and `queries` with `id`, `text`, an optional `court`, and
+`relevant`, the independently labeled case numbers within the query's scope.
+Include cases with inflected terms in those labels even when they yield no
+literal match. The report includes query IDs, result counts, and per-query and
+macro-averaged Precision@5 and Recall@10. Empty result positions count against
+Precision@5. The runner creates a temporary SQLite database and emits no
+document text, excerpts, or case numbers.
+
+This measures retrieval on already extracted text. The 30-decision evaluation
+in issue #11 also requires a rights-reviewed corpus and a separate extraction
+comparison on the original PDFs.
+
 ## 2. Two-case comparison
 - GET /v1/compare?left=А40-123/2025&right=А55-456/2025
 - CLI: judicial-intelligence compare А40-123/2025 А55-456/2025

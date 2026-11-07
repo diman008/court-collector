@@ -46,3 +46,47 @@ def test_reproducible_synthetic_search_precision(tmp_path):
     assert ids == relevant
     assert precision == 1.0 and recall == 1.0
     assert store.search_text("аренда")["results"][0]["case_number"] == "А55-103/2025"
+
+
+def test_ranked_search_benchmark_counts_short_results_and_inflection_misses():
+    from scripts.benchmark_ranked_search import evaluate
+
+    corpus = {
+        "documents": [
+            {"case_number": "А40-1/2025", "court": "Москва", "text": "Доказательства поставки."},
+            {"case_number": "А55-2/2025", "court": "Самара", "text": "Доказательства поставки."},
+            {"case_number": "А55-3/2025", "court": "Самара", "text": "Доказательства по поставкам."},
+        ],
+        "queries": [
+            {"id": "inflection", "text": "доказательства поставки",
+             "relevant": ["А40-1/2025", "А55-2/2025", "А55-3/2025"]},
+            {"id": "court-filter", "text": "доказательства поставки", "court": "Самара",
+             "relevant": ["А55-2/2025"]},
+        ],
+    }
+
+    report = evaluate(corpus)
+
+    assert report["queries"] == [
+        {"query_id": "inflection", "returned": 2, "precision_at_5": 2 / 5, "recall_at_10": 2 / 3},
+        {"query_id": "court-filter", "returned": 1, "precision_at_5": 1 / 5, "recall_at_10": 1},
+    ]
+
+
+def test_ranked_search_benchmark_applies_top_five_and_top_ten_cutoffs():
+    from scripts.benchmark_ranked_search import evaluate
+
+    corpus = {
+        "documents": [
+            {"case_number": f"А40-{index}/2025", "court": "", "text": "Поставка"}
+            for index in range(100, 112)
+        ],
+        "queries": [{"id": "cutoffs", "text": "поставка",
+                     "relevant": ["А40-100/2025", "А40-105/2025", "А40-111/2025"]}],
+    }
+
+    report = evaluate(corpus)
+
+    assert report["queries"][0]["returned"] == 10
+    assert report["macro_precision_at_5"] == 1 / 5
+    assert report["macro_recall_at_10"] == 2 / 3
