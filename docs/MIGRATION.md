@@ -19,6 +19,16 @@
 - IDs with `/` belong in query parameters, **not in URL path segments**.
 - API access requires `X-API-Key`; missing server key disables data APIs.
 
+## Norm reference extraction
+
+`judicial_intelligence.api:app` is the HTTP entry point. The historical
+`norm_candidates` function from `server.py` is preserved under `legacy/`.
+In v2, `/v1/report` and `/v1/dossier` return literal article mentions with the
+original spelling, whitespace and offsets. `/v1/dossier` also returns a list
+of distinct article numbers in `norm_articles`. Spelling variants and repeated
+mentions of the same article share one number in that list. The legacy
+function's shortlist and lowercase output are not part of the v2 API contract.
+
 ## Safe cutover checklist
 1. Record default branch SHA and archive legacy sources; verify the original repos remain accessible.
 2. Run `python -m pip install -e ".[test]"` and `python -m pytest -q`.
