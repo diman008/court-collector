@@ -13,11 +13,13 @@ def evaluate(corpus):
     with TemporaryDirectory() as directory:
         store = SearchStore(str(Path(directory) / "benchmark.db"))
         cases = set()
+        court_by_case = {}
         for document in corpus["documents"]:
             number = normalize_case_number(document["case_number"])
             if number in cases:
                 raise ValueError("Use exactly one text per case in the benchmark")
             cases.add(number)
+            court_by_case[number] = document["court"]
             store.put_case(number, court=document["court"])
             store.put_document(number, document["text"], "user_provided")
 
@@ -26,7 +28,12 @@ def evaluate(corpus):
             relevant = {normalize_case_number(number) for number in query["relevant"]}
             if not relevant or not relevant <= cases:
                 raise ValueError("Each query needs relevant cases from the benchmark corpus")
-            matches = store.search_text(query["text"], court=query.get("court"), limit=10)
+            requested_court = query.get("court")
+            if requested_court is not None and any(
+                court_by_case[number] != requested_court for number in relevant
+            ):
+                raise ValueError("Relevant case outside the requested court filter")
+            matches = store.search_text(query["text"], court=requested_court, limit=10)
             ranked = [item["case_number"] for item in matches["results"]]
             rows.append({
                 "query_id": query["id"],
